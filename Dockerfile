@@ -105,8 +105,8 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
     #&& docker-php-ext-configure pdo_oci --with-pdo-oci=instantclient,/usr/local/instantclient \
     #&& docker-php-ext-install pdo_oci \ 
     && echo "extension=oci8.so" >> /etc/php/7.4/cli/php.ini \
-    #&& echo "extension=oci8.so" >> /etc/php/7.4/fpm/php.ini \
-    && rm -rf /etc/php/7.4/fpm/php.ini \
+    && echo "extension=oci8.so" >> /etc/php/7.4/fpm/php.ini \
+    #&& rm -rf /etc/php/7.4/fpm/php.ini \
     # Install Composer
     && curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
     && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
@@ -126,7 +126,7 @@ COPY ./supervisord.conf /etc/supervisord.conf
 # Override nginx's default config
 COPY ./default.conf /etc/nginx/conf.d/default.conf
 COPY ./nginx.conf   /etc/nginx/nginx.conf
-COPY ./php.ini      /etc/php/7.4/fpm/php.ini
+#COPY ./php.ini      /etc/php/7.4/fpm/php.ini
 
 # Override default nginx welcome page
 COPY html /usr/share/nginx/html
