@@ -53,6 +53,7 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
             php7.4-readline \
             php7.4-mbstring \
             php7.4-curl \
+	    php7.4-ldap \
             php7.4-gd \
             php7.4-imagick \
             php7.4-mysql \
@@ -67,6 +68,7 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
     && pip install supervisor supervisor-stdout \
     && echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d \
     && rm -rf /etc/nginx/conf.d/default.conf \
+    && rm -rf /etc/nginx/nginx.conf \
     && sed -i -e "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g" ${php_conf} \
     && sed -i -e "s/memory_limit\s*=\s*.*/memory_limit = 256M/g" ${php_conf} \
     && sed -i -e "s/upload_max_filesize\s*=\s*2M/upload_max_filesize = 100M/g" ${php_conf} \
@@ -87,6 +89,24 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
     && ln -sf /etc/php/7.4/mods-available/redis.ini /etc/php/7.4/cli/conf.d/20-redis.ini \
     && ln -sf /etc/php/7.4/mods-available/memcached.ini /etc/php/7.4/fpm/conf.d/20-memcached.ini \
     && ln -sf /etc/php/7.4/mods-available/memcached.ini /etc/php/7.4/cli/conf.d/20-memcached.ini \
+	    # install oci
+    && apt-get -y install wget bsdtar libaio1 && \
+    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-basic-linux.x64-12.2.0.1.0.zip | bsdtar -xvf- -C /usr/local && \
+    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-sdk-linux.x64-12.2.0.1.0.zip | bsdtar -xvf-  -C /usr/local && \
+    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-sqlplus-linux.x64-12.2.0.1.0.zip | bsdtar -xvf- -C /usr/local && \
+    ln -s /usr/local/instantclient_12_2 /usr/local/instantclient && \
+    ln -s /usr/local/instantclient/libclntsh.so.* /usr/local/instantclient/libclntsh.so && \
+    ln -s /usr/local/instantclient/lib* /usr/lib && \
+    ln -s /usr/local/instantclient/sqlplus /usr/bin/sqlplus \ 
+    # add php oci
+    #pecl install oci8-2.2.0 \
+    && echo 'instantclient,/usr/local/instantclient/' | pecl install oci8-2.2.0 \
+    #&& docker-php-ext-enable oci8 \
+    #&& docker-php-ext-configure pdo_oci --with-pdo-oci=instantclient,/usr/local/instantclient \
+    #&& docker-php-ext-install pdo_oci \ 
+    && echo "extension=oci8.so" >> /etc/php/7.4/cli/php.ini \
+    #&& echo "extension=oci8.so" >> /etc/php/7.4/fpm/php.ini \
+    && rm -rf /etc/php/7.4/fpm/php.ini \
     # Install Composer
     && curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
     && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
@@ -105,6 +125,8 @@ COPY ./supervisord.conf /etc/supervisord.conf
 
 # Override nginx's default config
 COPY ./default.conf /etc/nginx/conf.d/default.conf
+COPY ./nginx.conf   /etc/nginx/nginx.conf
+COPY ./php.ini      /etc/php/7.4/fpm/php.ini
 
 # Override default nginx welcome page
 COPY html /usr/share/nginx/html
